@@ -5,3 +5,4 @@ matplotlib
 nibabel
 scikit-image
 tqdm
+opencv-python
