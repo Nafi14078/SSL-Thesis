@@ -28,8 +28,13 @@ dataset = BratsSSLDataset(
     max_samples=MAX_SAMPLES
 )
 
+print("Total dataset size:", len(dataset))
+
 val_size = int(len(dataset) * VAL_SPLIT)
 train_size = len(dataset) - val_size
+
+print("Train size:", train_size)
+print("Val size:", val_size)
 
 train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
