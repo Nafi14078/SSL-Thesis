@@ -43,19 +43,17 @@ class BratsSSLDataset(Dataset):
     # ----------------------------
     # INPAINTING
     # ----------------------------
-    def mask_image(self, img, mask_size=32):
+    def mask_image(self, img, mask_size=48, num_masks=3):
         h, w = img.shape
-
-        x = np.random.randint(0, h - mask_size)
-        y = np.random.randint(0, w - mask_size)
-
         masked_img = img.copy()
-        masked_img[x:x + mask_size, y:y + mask_size] = 0
 
-        mask = np.zeros_like(img)
-        mask[x:x + mask_size, y:y + mask_size] = 1
+        for _ in range(num_masks):
+            x = np.random.randint(0, h - mask_size)
+            y = np.random.randint(0, w - mask_size)
 
-        return masked_img, mask
+            masked_img[x:x + mask_size, y:y + mask_size] = 0
+
+        return masked_img
 
     # ----------------------------
     # LENGTH
@@ -80,12 +78,11 @@ class BratsSSLDataset(Dataset):
             )
 
         elif self.task == "inpainting":
-            masked_img, mask = self.mask_image(img)
+            masked_img = self.mask_image(img)
 
             return (
                 torch.FloatTensor(masked_img).unsqueeze(0),
-                torch.FloatTensor(img).unsqueeze(0),
-                torch.FloatTensor(mask).unsqueeze(0)
+                torch.FloatTensor(img).unsqueeze(0)
             )
 
         else:

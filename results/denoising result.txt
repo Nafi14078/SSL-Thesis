@@ -3,4 +3,5 @@ Validation samples: 2000
 ===== DENOISING EVALUATION RESULTS =====
 Average PSNR: 36.3181 dB
 Average SSIM: 0.9484
+Validation MSE = 0.000443
 =========================================
