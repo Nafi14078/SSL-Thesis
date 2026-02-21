@@ -1,0 +1,6 @@
+===== INPAINTING EVALUATION RESULTS =====
+Average PSNR: 24.6891 dB
+Average SSIM: 0.8293
+
+Train Loss: 0.006009
+Val Loss:   0.005662
