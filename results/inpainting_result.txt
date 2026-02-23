@@ -4,3 +4,10 @@ Average SSIM: 0.8293
 
 Train Loss: 0.006009
 Val Loss:   0.005662
+
+
+===== INPAINTING EVALUATION RESULTS =====
+Masked Region PSNR: 24.7684 dB
+Full Image SSIM:    0.8432
+==========================================
+

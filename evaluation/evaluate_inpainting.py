@@ -11,7 +11,7 @@ from models.unet import UNet
 # SETTINGS
 # -----------------------------
 DATA_DIR = "processed"
-CHECKPOINT_PATH = "checkpoints/inpainting_best.pth"
+CHECKPOINT_PATH = "checkpoints/inpainting_best_single.pth"
 MAX_SAMPLES = 10000
 BATCH_SIZE = 2
 VAL_SPLIT = 0.2

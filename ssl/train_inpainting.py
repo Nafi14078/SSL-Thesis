@@ -111,7 +111,7 @@ for epoch in range(EPOCHS):
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         os.makedirs("checkpoints", exist_ok=True)
-        torch.save(model.state_dict(), "checkpoints/inpainting_best.pth")
+        torch.save(model.state_dict(), "checkpoints/inpainting_best_single.pth")
         print("✅ Best model saved.\n")
 
 print("🎉 Training Complete.")
