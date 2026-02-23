@@ -21,7 +21,7 @@ dataset = BratsSSLDataset(
     max_samples=100
 )
 
-masked, clean = dataset[10]
+masked, clean, mask = dataset[10]   # <-- FIXED
 
 # -----------------------------
 # Load Model
@@ -41,26 +41,32 @@ with torch.no_grad():
 # -----------------------------
 masked = masked.squeeze().numpy()
 clean = clean.squeeze().numpy()
+mask = mask.squeeze().numpy()
 output = output.squeeze().numpy().clip(0, 1)
 
 # -----------------------------
 # Plot
 # -----------------------------
-plt.figure(figsize=(12,4))
+plt.figure(figsize=(16,4))
 
-plt.subplot(1,3,1)
+plt.subplot(1,4,1)
 plt.title("Masked Input")
 plt.imshow(masked, cmap="gray")
 plt.axis("off")
 
-plt.subplot(1,3,2)
+plt.subplot(1,4,2)
 plt.title("Reconstructed Output")
 plt.imshow(output, cmap="gray")
 plt.axis("off")
 
-plt.subplot(1,3,3)
+plt.subplot(1,4,3)
 plt.title("Ground Truth")
 plt.imshow(clean, cmap="gray")
+plt.axis("off")
+
+plt.subplot(1,4,4)
+plt.title("Mask")
+plt.imshow(mask, cmap="gray")
 plt.axis("off")
 
 plt.tight_layout()

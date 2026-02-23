@@ -46,15 +46,40 @@ class BratsSSLDataset(Dataset):
     def mask_image(self, img, mask_size=48, num_masks=3):
         h, w = img.shape
         masked_img = img.copy()
+        mask = np.zeros_like(img)
+
+        placed_masks = []
 
         for _ in range(num_masks):
-            x = np.random.randint(0, h - mask_size)
-            y = np.random.randint(0, w - mask_size)
 
-            masked_img[x:x + mask_size, y:y + mask_size] = 0
+            attempts = 0
+            while True:
+                x = np.random.randint(0, h - mask_size)
+                y = np.random.randint(0, w - mask_size)
 
-        return masked_img
+                new_box = (x, y, x + mask_size, y + mask_size)
 
+                overlap = False
+
+                # Check overlap with previous masks
+                for (px1, py1, px2, py2) in placed_masks:
+                    if not (new_box[2] <= px1 or new_box[0] >= px2 or
+                            new_box[3] <= py1 or new_box[1] >= py2):
+                        overlap = True
+                        break
+
+                if not overlap:
+                    placed_masks.append(new_box)
+                    masked_img[x:x + mask_size, y:y + mask_size] = 0
+                    mask[x:x + mask_size, y:y + mask_size] = 1
+                    break
+
+                attempts += 1
+                if attempts > 50:
+                    # fallback (rare)
+                    break
+
+        return masked_img, mask
     # ----------------------------
     # LENGTH
     # ----------------------------
@@ -78,11 +103,12 @@ class BratsSSLDataset(Dataset):
             )
 
         elif self.task == "inpainting":
-            masked_img = self.mask_image(img)
+            masked_img, mask = self.mask_image(img)
 
             return (
                 torch.FloatTensor(masked_img).unsqueeze(0),
-                torch.FloatTensor(img).unsqueeze(0)
+                torch.FloatTensor(img).unsqueeze(0),
+                torch.FloatTensor(mask).unsqueeze(0)
             )
 
         else:
