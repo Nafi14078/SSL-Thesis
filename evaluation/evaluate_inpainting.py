@@ -1,7 +1,6 @@
 import torch
 import numpy as np
 from torch.utils.data import DataLoader, random_split
-from skimage.metrics import peak_signal_noise_ratio as psnr
 from skimage.metrics import structural_similarity as ssim
 
 from datasets.brats_dataset import BratsSSLDataset
@@ -11,11 +10,13 @@ from models.unet import UNet
 # SETTINGS
 # -----------------------------
 DATA_DIR = "processed"
-CHECKPOINT_PATH = "checkpoints/inpainting_best_single.pth"
+CHECKPOINT_PATH = "checkpoints/inpainting_best_32_single.pth"
 MAX_SAMPLES = 10000
 BATCH_SIZE = 2
 VAL_SPLIT = 0.2
 DEVICE = "cpu"
+
+EPS = 1e-10  # Prevent divide-by-zero
 
 # -----------------------------
 # Dataset
@@ -66,14 +67,19 @@ with torch.no_grad():
             gt = np.clip(clean[i, 0], 0, 1)
             mask = masks[i, 0]
 
-            # Evaluate ONLY masked region
+            # Only masked region
             pred_masked = pred[mask == 1]
             gt_masked = gt[mask == 1]
 
             if len(pred_masked) == 0:
                 continue
 
-            total_psnr += psnr(gt_masked, pred_masked, data_range=1.0)
+            # ---- Stable PSNR ----
+            mse = np.mean((gt_masked - pred_masked) ** 2)
+            psnr_value = 10 * np.log10(1.0 / (mse + EPS))
+            total_psnr += psnr_value
+
+            # ---- Full-image SSIM ----
             total_ssim += ssim(gt, pred, data_range=1.0)
 
             num_images += 1

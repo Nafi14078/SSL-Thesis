@@ -43,7 +43,7 @@ class BratsSSLDataset(Dataset):
     # ----------------------------
     # INPAINTING
     # ----------------------------
-    def mask_image(self, img, mask_size=48, num_masks=1):
+    def mask_image(self, img, mask_size=32, num_masks=1):
         h, w = img.shape
         masked_img = img.copy()
         mask = np.zeros_like(img)

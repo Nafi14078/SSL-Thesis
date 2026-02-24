@@ -27,7 +27,7 @@ masked, clean, mask = dataset[10]   # <-- FIXED
 # Load Model
 # -----------------------------
 model = UNet().to(device)
-model.load_state_dict(torch.load("checkpoints/inpainting_best_single.pth", map_location=device))
+model.load_state_dict(torch.load("checkpoints/inpainting_best_32_single.pth", map_location=device))
 model.eval()
 
 # -----------------------------
@@ -74,7 +74,7 @@ plt.tight_layout()
 # -----------------------------
 # Save
 # -----------------------------
-save_path = "results/inpainting_example_single.png"
+save_path = "results/inpainting_example_single_32.png"
 plt.savefig(save_path, dpi=300)
 plt.close()
 

@@ -1,13 +1,16 @@
-===== INPAINTING EVALUATION RESULTS =====
-Average PSNR: 24.6891 dB
-Average SSIM: 0.8293
-
-Train Loss: 0.006009
-Val Loss:   0.005662
+===== INPAINTING EVALUATION RESULTS(multi mask) =====
+Average PSNR: 22.6891 dB
+Average SSIM: 0.7393
 
 
 ===== INPAINTING EVALUATION RESULTS =====
 Masked Region PSNR: 24.7684 dB
 Full Image SSIM:    0.8432
 ==========================================
+
+===== INPAINTING EVALUATION RESULTS =====
+Masked Region PSNR: 35.6290 dB
+Full Image SSIM:    0.9043
+==========================================
+
 

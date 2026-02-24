@@ -13,7 +13,7 @@ from models.unet import UNet
 DATA_DIR = "processed"
 MAX_SAMPLES = 10000
 BATCH_SIZE = 2
-EPOCHS = 15          # increased for better convergence
+EPOCHS = 30          # increased for better convergence
 LR = 1e-4
 VAL_SPLIT = 0.2
 
@@ -111,7 +111,7 @@ for epoch in range(EPOCHS):
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         os.makedirs("checkpoints", exist_ok=True)
-        torch.save(model.state_dict(), "checkpoints/inpainting_best_single.pth")
+        torch.save(model.state_dict(), "checkpoints/inpainting_best_32_single.pth")
         print("✅ Best model saved.\n")
 
 print("🎉 Training Complete.")
