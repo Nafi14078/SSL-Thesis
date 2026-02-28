@@ -9,47 +9,57 @@ from datasets.brats_dataset import BratsSSLDataset
 from models.unet import UNet
 
 
-# -----------------------------
+# ======================================================
 # CONFIG
-# -----------------------------
-DEVICE = "cpu"
+# ======================================================
+
+DEVICE = torch.device("cpu")
+
 DATA_DIR = "processed"
-CHECKPOINT_PATH = "checkpoints/denoising_best.pth"
+SPLIT_PATH = "splits/val.txt"  # Use validation set for fair evaluation
+CHECKPOINT_PATH = "checkpoints/best_denoising_model.pth"
+
 SAVE_DIR = "results"
 SAVE_NAME = "denoising_visualization.png"
 
+SAMPLE_INDEX = 25  # Change this to visualize different samples
 
-# -----------------------------
+
+# ======================================================
 # Create results folder
-# -----------------------------
+# ======================================================
+
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 
-# -----------------------------
-# Load Dataset
-# -----------------------------
+# ======================================================
+# Load Dataset (Deterministic Split)
+# ======================================================
+
 dataset = BratsSSLDataset(
     data_dir=DATA_DIR,
-    task="denoising",
-    max_samples=50
+    file_list_path=SPLIT_PATH,
+    task="denoising"
 )
 
-noisy, clean = dataset[10]
+noisy, clean = dataset[SAMPLE_INDEX]
 
 
-# -----------------------------
+# ======================================================
 # Load Model
-# -----------------------------
-model = UNet().to(DEVICE)
+# ======================================================
+
+model = UNet(in_channels=1, out_channels=1).to(DEVICE)
 model.load_state_dict(torch.load(CHECKPOINT_PATH, map_location=DEVICE))
 model.eval()
 
 
-# -----------------------------
+# ======================================================
 # Inference
-# -----------------------------
+# ======================================================
+
 with torch.no_grad():
-    output = model(noisy.unsqueeze(0))
+    output = model(noisy.unsqueeze(0).to(DEVICE))
 
 output = output.squeeze().cpu().numpy()
 noisy = noisy.squeeze().cpu().numpy()
@@ -59,16 +69,19 @@ clean = clean.squeeze().cpu().numpy()
 output = np.clip(output, 0, 1)
 clean = np.clip(clean, 0, 1)
 
-# -----------------------------
+
+# ======================================================
 # Compute Metrics
-# -----------------------------
+# ======================================================
+
 image_psnr = psnr(clean, output, data_range=1.0)
 image_ssim = ssim(clean, output, data_range=1.0)
 
 
-# -----------------------------
+# ======================================================
 # Visualization
-# -----------------------------
+# ======================================================
+
 plt.figure(figsize=(12, 4))
 
 plt.subplot(1, 3, 1)
@@ -92,6 +105,6 @@ save_path = os.path.join(SAVE_DIR, SAVE_NAME)
 plt.savefig(save_path, dpi=300, bbox_inches="tight")
 plt.close()
 
-print(f"✅ Visualization saved at: {save_path}")
+print(f"\n✅ Visualization saved at: {save_path}")
 print(f"PSNR: {image_psnr:.2f} dB")
 print(f"SSIM: {image_ssim:.4f}")

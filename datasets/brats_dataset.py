@@ -2,7 +2,6 @@ import os
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-import random
 
 
 class BratsSSLDataset(Dataset):
@@ -15,34 +14,30 @@ class BratsSSLDataset(Dataset):
 
     Parameters:
         data_dir (str): Path to processed .npy slices
+        file_list_path (str): Path to train.txt or val.txt
         task (str): "denoising" or "inpainting"
-        max_samples (int): Use subset for faster experimentation
     """
 
-    def __init__(self, data_dir, task="denoising", max_samples=None):
+    def __init__(self, data_dir, file_list_path, task="denoising"):
+
         self.data_dir = data_dir
-        self.files = os.listdir(data_dir)
-
-        # Shuffle files for randomness
-        random.shuffle(self.files)
-
-        # Optional subset
-        if max_samples is not None:
-            self.files = self.files[:max_samples]
-
         self.task = task
 
-    # ----------------------------
+        # Load fixed file list (deterministic split)
+        with open(file_list_path, "r") as f:
+            self.files = f.read().splitlines()
+
+    # ======================================================
     # DENOISING
-    # ----------------------------
+    # ======================================================
     def add_noise(self, img, noise_std=0.1):
         noise = np.random.normal(0, noise_std, img.shape)
         noisy = img + noise
         return np.clip(noisy, 0, 1)
 
-    # ----------------------------
+    # ======================================================
     # INPAINTING
-    # ----------------------------
+    # ======================================================
     def mask_image(self, img, mask_size=32, num_masks=1):
         h, w = img.shape
         masked_img = img.copy()
@@ -63,8 +58,12 @@ class BratsSSLDataset(Dataset):
 
                 # Check overlap with previous masks
                 for (px1, py1, px2, py2) in placed_masks:
-                    if not (new_box[2] <= px1 or new_box[0] >= px2 or
-                            new_box[3] <= py1 or new_box[1] >= py2):
+                    if not (
+                        new_box[2] <= px1 or
+                        new_box[0] >= px2 or
+                        new_box[3] <= py1 or
+                        new_box[1] >= py2
+                    ):
                         overlap = True
                         break
 
@@ -76,24 +75,26 @@ class BratsSSLDataset(Dataset):
 
                 attempts += 1
                 if attempts > 50:
-                    # fallback (rare)
                     break
 
         return masked_img, mask
-    # ----------------------------
+
+    # ======================================================
     # LENGTH
-    # ----------------------------
+    # ======================================================
     def __len__(self):
         return len(self.files)
 
-    # ----------------------------
+    # ======================================================
     # GET ITEM
-    # ----------------------------
+    # ======================================================
     def __getitem__(self, idx):
+
         file_path = os.path.join(self.data_dir, self.files[idx])
         img = np.load(file_path)
 
         if self.task == "denoising":
+
             input_img = self.add_noise(img)
             target = img
 
@@ -103,6 +104,7 @@ class BratsSSLDataset(Dataset):
             )
 
         elif self.task == "inpainting":
+
             masked_img, mask = self.mask_image(img)
 
             return (
