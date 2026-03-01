@@ -1,81 +1,124 @@
 import os
 import torch
+import numpy as np
 import matplotlib.pyplot as plt
+from skimage.metrics import peak_signal_noise_ratio as psnr
+from skimage.metrics import structural_similarity as ssim
 
 from datasets.brats_dataset import BratsSSLDataset
 from models.unet import UNet
 
-device = "cpu"
 
-# -----------------------------
+# ======================================================
+# CONFIG
+# ======================================================
+
+DEVICE = torch.device("cpu")
+
+DATA_DIR = "processed"
+SPLIT_PATH = "splits/val.txt"
+CHECKPOINT_PATH = "checkpoints/best_inpainting_model.pth"
+
+SAVE_DIR = "results"
+SAVE_NAME = "inpainting_visualization.png"
+
+SAMPLE_INDEX = 25  # Change to visualize different slice
+
+
+# ======================================================
 # Create results folder
-# -----------------------------
-os.makedirs("results", exist_ok=True)
+# ======================================================
 
-# -----------------------------
+os.makedirs(SAVE_DIR, exist_ok=True)
+
+
+# ======================================================
 # Load Dataset
-# -----------------------------
+# ======================================================
+
 dataset = BratsSSLDataset(
-    data_dir="processed",
-    task="inpainting",
-    max_samples=100
+    data_dir=DATA_DIR,
+    file_list_path=SPLIT_PATH,
+    task="inpainting"
 )
 
-masked, clean, mask = dataset[10]   # <-- FIXED
+masked_img, original, mask = dataset[SAMPLE_INDEX]
 
-# -----------------------------
+
+# ======================================================
 # Load Model
-# -----------------------------
-model = UNet().to(device)
-model.load_state_dict(torch.load("checkpoints/inpainting_best_32_single.pth", map_location=device))
+# ======================================================
+
+model = UNet(in_channels=1, out_channels=1).to(DEVICE)
+model.load_state_dict(torch.load(CHECKPOINT_PATH, map_location=DEVICE))
 model.eval()
 
-# -----------------------------
+
+# ======================================================
 # Inference
-# -----------------------------
+# ======================================================
+
 with torch.no_grad():
-    output = model(masked.unsqueeze(0))
+    output = model(masked_img.unsqueeze(0).to(DEVICE))
 
-# -----------------------------
-# Convert to numpy
-# -----------------------------
-masked = masked.squeeze().numpy()
-clean = clean.squeeze().numpy()
-mask = mask.squeeze().numpy()
-output = output.squeeze().numpy().clip(0, 1)
+output = output.squeeze().cpu().numpy()
+masked_img = masked_img.squeeze().cpu().numpy()
+original = original.squeeze().cpu().numpy()
+mask = mask.squeeze().cpu().numpy()
 
-# -----------------------------
-# Plot
-# -----------------------------
-plt.figure(figsize=(16,4))
+output = np.clip(output, 0, 1)
+original = np.clip(original, 0, 1)
 
-plt.subplot(1,4,1)
+
+# ======================================================
+# Compute Masked Metrics
+# ======================================================
+
+masked_pixels = mask > 0.5
+
+if np.sum(masked_pixels) > 0:
+    pred_masked = output[masked_pixels]
+    gt_masked = original[masked_pixels]
+
+    image_psnr = psnr(gt_masked, pred_masked, data_range=1.0)
+    image_ssim = ssim(gt_masked, pred_masked, data_range=1.0)
+else:
+    image_psnr = 0
+    image_ssim = 0
+
+
+# ======================================================
+# Visualization
+# ======================================================
+
+plt.figure(figsize=(15, 4))
+
+plt.subplot(1, 4, 1)
 plt.title("Masked Input")
-plt.imshow(masked, cmap="gray")
+plt.imshow(masked_img, cmap="gray")
 plt.axis("off")
 
-plt.subplot(1,4,2)
-plt.title("Reconstructed Output")
+plt.subplot(1, 4, 2)
+plt.title(f"Reconstruction\nPSNR: {image_psnr:.2f} dB\nSSIM: {image_ssim:.4f}")
 plt.imshow(output, cmap="gray")
 plt.axis("off")
 
-plt.subplot(1,4,3)
+plt.subplot(1, 4, 3)
 plt.title("Ground Truth")
-plt.imshow(clean, cmap="gray")
+plt.imshow(original, cmap="gray")
 plt.axis("off")
 
-plt.subplot(1,4,4)
+plt.subplot(1, 4, 4)
 plt.title("Mask")
 plt.imshow(mask, cmap="gray")
 plt.axis("off")
 
 plt.tight_layout()
 
-# -----------------------------
-# Save
-# -----------------------------
-save_path = "results/inpainting_example_single_32.png"
-plt.savefig(save_path, dpi=300)
+save_path = os.path.join(SAVE_DIR, SAVE_NAME)
+plt.savefig(save_path, dpi=300, bbox_inches="tight")
 plt.close()
 
-print(f"✅ Inpainting visualization saved to {save_path}")
+print(f"\n✅ Visualization saved at: {save_path}")
+print(f"Masked PSNR: {image_psnr:.2f} dB")
+print(f"Masked SSIM: {image_ssim:.4f}")

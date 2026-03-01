@@ -14,7 +14,7 @@ class BratsSSLDataset(Dataset):
 
     Parameters:
         data_dir (str): Path to processed .npy slices
-        file_list_path (str): Path to train.txt or val.txt
+        file_list_path (str): Path to train.txt or val.txt in
         task (str): "denoising" or "inpainting"
     """
 

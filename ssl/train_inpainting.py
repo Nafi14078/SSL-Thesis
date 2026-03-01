@@ -1,117 +1,171 @@
+import os
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, random_split
+import torch.optim as optim
+from torch.utils.data import DataLoader
 from tqdm import tqdm
-import os
+import matplotlib.pyplot as plt
 
 from datasets.brats_dataset import BratsSSLDataset
 from models.unet import UNet
 
-# ----------------------------
-# CONFIG
-# ----------------------------
+
+# ======================================================
+# CONFIGURATION
+# ======================================================
+
 DATA_DIR = "processed"
-MAX_SAMPLES = 10000
-BATCH_SIZE = 2
-EPOCHS = 30          # increased for better convergence
-LR = 1e-4
-VAL_SPLIT = 0.2
+TRAIN_SPLIT = "splits/train.txt"
+VAL_SPLIT = "splits/val.txt"
 
-device = "cpu"
+BATCH_SIZE = 8
+EPOCHS = 20
+LEARNING_RATE = 1e-3
 
-# ----------------------------
-# DATASET
-# ----------------------------
-dataset = BratsSSLDataset(
+DEVICE = torch.device("cpu")
+
+
+# ======================================================
+# DATASET & DATALOADER
+# ======================================================
+
+train_dataset = BratsSSLDataset(
     data_dir=DATA_DIR,
-    task="inpainting",
-    max_samples=MAX_SAMPLES
+    file_list_path=TRAIN_SPLIT,
+    task="inpainting"
 )
 
-print("Total dataset size:", len(dataset))
+val_dataset = BratsSSLDataset(
+    data_dir=DATA_DIR,
+    file_list_path=VAL_SPLIT,
+    task="inpainting"
+)
 
-val_size = int(len(dataset) * VAL_SPLIT)
-train_size = len(dataset) - val_size
+train_loader = DataLoader(
+    train_dataset,
+    batch_size=BATCH_SIZE,
+    shuffle=False,
+    num_workers=0
+)
 
-print("Train size:", train_size)
-print("Val size:", val_size)
+val_loader = DataLoader(
+    val_dataset,
+    batch_size=BATCH_SIZE,
+    shuffle=False,
+    num_workers=0
+)
 
-train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
-
-# ----------------------------
+# ======================================================
 # MODEL
-# ----------------------------
-model = UNet().to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+# ======================================================
+
+model = UNet(in_channels=1, out_channels=1)
+model.to(DEVICE)
+
+criterion = nn.MSELoss()
+optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+
+
+# ======================================================
+# TRAINING LOOP
+# ======================================================
+
+train_losses = []
+val_losses = []
 
 best_val_loss = float("inf")
 
-# ----------------------------
-# TRAIN LOOP
-# ----------------------------
+os.makedirs("checkpoints", exist_ok=True)
+
+print("🚀 Starting Inpainting Training on CPU...\n")
+
 for epoch in range(EPOCHS):
 
-    # ----------------------------
+    # -------------------------
     # TRAIN
-    # ----------------------------
+    # -------------------------
     model.train()
-    train_loss = 0
+    running_train_loss = 0.0
 
-    for masked, clean, masks in tqdm(train_loader, desc=f"Epoch {epoch+1} Training"):
-        masked = masked.to(device)
-        clean = clean.to(device)
-        masks = masks.to(device)
+    for masked_img, original, mask in tqdm(train_loader, desc=f"Epoch {epoch+1}/{EPOCHS}"):
 
-        output = model(masked)
-
-        # Masked-region MSE loss
-        loss = ((output - clean) ** 2 * masks).sum() / (masks.sum() + 1e-8)
+        masked_img = masked_img.to(DEVICE)
+        original = original.to(DEVICE)
+        mask = mask.to(DEVICE)
 
         optimizer.zero_grad()
+
+        output = model(masked_img)
+
+        # 🔥 Important: compute loss ONLY on masked region
+        loss = criterion(output * mask, original * mask)
+
         loss.backward()
         optimizer.step()
 
-        train_loss += loss.item()
+        running_train_loss += loss.item() * masked_img.size(0)
 
-    train_loss /= len(train_loader)
+    epoch_train_loss = running_train_loss / len(train_loader.dataset)
+    train_losses.append(epoch_train_loss)
 
-    # ----------------------------
+    # -------------------------
     # VALIDATION
-    # ----------------------------
+    # -------------------------
     model.eval()
-    val_loss = 0
+    running_val_loss = 0.0
 
     with torch.no_grad():
-        for masked, clean, masks in tqdm(val_loader, desc=f"Epoch {epoch+1} Validation"):
-            masked = masked.to(device)
-            clean = clean.to(device)
-            masks = masks.to(device)
+        for masked_img, original, mask in val_loader:
 
-            output = model(masked)
+            masked_img = masked_img.to(DEVICE)
+            original = original.to(DEVICE)
+            mask = mask.to(DEVICE)
 
-            loss = ((output - clean) ** 2 * masks).sum() / (masks.sum() + 1e-8)
+            output = model(masked_img)
 
-            val_loss += loss.item()
+            loss = criterion(output * mask, original * mask)
 
-    val_loss /= len(val_loader)
+            running_val_loss += loss.item() * masked_img.size(0)
 
-    # ----------------------------
-    # LOGGING
-    # ----------------------------
-    print(f"\nEpoch {epoch+1}/{EPOCHS}")
-    print(f"Train Masked Loss: {train_loss:.6f}")
-    print(f"Val Masked Loss:   {val_loss:.6f}")
+    epoch_val_loss = running_val_loss / len(val_loader.dataset)
+    val_losses.append(epoch_val_loss)
 
-    # ----------------------------
+    print(f"\nEpoch [{epoch+1}/{EPOCHS}]")
+    print(f"Train Loss: {epoch_train_loss:.6f}")
+    print(f"Val Loss:   {epoch_val_loss:.6f}")
+
+    # -------------------------
     # SAVE BEST MODEL
-    # ----------------------------
-    if val_loss < best_val_loss:
-        best_val_loss = val_loss
-        os.makedirs("checkpoints", exist_ok=True)
-        torch.save(model.state_dict(), "checkpoints/inpainting_best_32_single.pth")
-        print("✅ Best model saved.\n")
+    # -------------------------
+    if epoch_val_loss < best_val_loss:
+        best_val_loss = epoch_val_loss
+        torch.save(model.state_dict(), "checkpoints/best_inpainting_model.pth")
+        print("✅ Best model saved!")
 
-print("🎉 Training Complete.")
+    print("-" * 50)
+
+
+# ======================================================
+# SAVE FINAL MODEL
+# ======================================================
+
+torch.save(model.state_dict(), "checkpoints/final_inpainting_model.pth")
+
+
+# ======================================================
+# PLOT LOSS CURVE
+# ======================================================
+
+plt.figure(figsize=(8,5))
+plt.plot(train_losses, label="Train Loss")
+plt.plot(val_losses, label="Validation Loss")
+plt.xlabel("Epoch")
+plt.ylabel("Masked MSE Loss")
+plt.title("Inpainting Training Curve")
+plt.legend()
+plt.grid(True)
+plt.savefig("checkpoints/inpainting_loss_curve.png")
+plt.show()
+
+print("\n🎉 Inpainting Training Completed Successfully!")

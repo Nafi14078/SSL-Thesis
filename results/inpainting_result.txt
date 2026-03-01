@@ -1,16 +1,5 @@
-===== INPAINTING EVALUATION RESULTS(multi mask) =====
-Average PSNR: 22.6891 dB
-Average SSIM: 0.7393
-
-
 ===== INPAINTING EVALUATION RESULTS =====
-Masked Region PSNR: 24.7684 dB
-Full Image SSIM:    0.8432
+Total images evaluated: 2000
+Average Masked PSNR: 34.2690 dB
+Average Masked SSIM: 0.7547
 ==========================================
-
-===== INPAINTING EVALUATION RESULTS =====
-Masked Region PSNR: 35.6290 dB
-Full Image SSIM:    0.9043
-==========================================
-
-
