@@ -1,16 +1,11 @@
 import os
 import numpy as np
 import torch
+import torch.nn.functional as F
 from torch.utils.data import Dataset
 
 
 class BratsSegmentationDataset(Dataset):
-    """
-    Segmentation dataset using:
-        - processed/        (FLAIR slices)
-        - processed_masks/  (tumor masks)
-        - splits/train.txt / val.txt
-    """
 
     def __init__(self, image_dir, mask_dir, split_file):
 
@@ -35,5 +30,9 @@ class BratsSegmentationDataset(Dataset):
 
         image = torch.FloatTensor(image).unsqueeze(0)
         mask = torch.FloatTensor(mask).unsqueeze(0)
+
+        # Resize both to 128x128
+        image = F.interpolate(image.unsqueeze(0), size=(128,128), mode="bilinear", align_corners=False).squeeze(0)
+        mask = F.interpolate(mask.unsqueeze(0), size=(128,128), mode="nearest").squeeze(0)
 
         return image, mask
