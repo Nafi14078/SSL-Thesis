@@ -14,8 +14,8 @@ from models.unet import UNet
 IMAGE_DIR = "processed"
 MASK_DIR = "processed_masks"
 
-TRAIN_SPLIT = "splits/train.txt"
-VAL_SPLIT = "splits/val.txt"
+TRAIN_SPLIT = "segmentation_splits/train.txt"
+VAL_SPLIT = "segmentation_splits/val.txt"
 
 PRETRAINED_PATH = "checkpoints/best_denoising_model.pth"
 
@@ -125,10 +125,10 @@ for epoch in range(EPOCHS):
         best_val_loss = val_loss
         torch.save(
             model.state_dict(),
-            os.path.join(CHECKPOINT_DIR, "segmentation_from_denoising_best.pth")
+            os.path.join(CHECKPOINT_DIR, "segmentation_from_denoising_best(different 10k).pth")
         )
         print("✅ Best model saved!")
 
     print("-" * 50)
 
-print("\n🎉 Fine-tuning from Denoising Completed!")
+print("\n🎉 Fine-tuning from Denoising(different 10k) Completed!")

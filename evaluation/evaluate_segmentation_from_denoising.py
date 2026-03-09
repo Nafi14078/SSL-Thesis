@@ -12,9 +12,9 @@ from models.unet import UNet
 # -----------------------------
 IMAGE_DIR = "processed"
 MASK_DIR = "processed_masks"
-VAL_SPLIT = "splits/val.txt"
+VAL_SPLIT = "segmentation_splits/val.txt"
 
-CHECKPOINT_PATH = "checkpoints/segmentation_from_denoising_best.pth"
+CHECKPOINT_PATH = "checkpoints/segmentation_from_denoising_best(different 10k).pth"
 
 BATCH_SIZE = 4
 DEVICE = "cpu"
@@ -90,7 +90,7 @@ avg_dice = total_dice / num_batches
 avg_iou = total_iou / num_batches
 
 
-print("\n===== SEGMENTATION (FROM DENOISING) RESULTS =====")
+print("\n===== SEGMENTATION (FROM DENOISING) RESULTS(different 10k) =====")
 print(f"Average Dice Score: {avg_dice:.4f}")
 print(f"Average IoU Score:  {avg_iou:.4f}")
 print("=================================================")
