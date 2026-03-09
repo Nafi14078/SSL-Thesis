@@ -14,8 +14,8 @@ from models.unet import UNet
 IMAGE_DIR = "processed"
 MASK_DIR = "processed_masks"
 
-TRAIN_SPLIT = "splits/train.txt"
-VAL_SPLIT = "splits/val.txt"
+TRAIN_SPLIT = "segmentation_splits/train.txt"
+VAL_SPLIT = "segmentation_splits/val.txt"
 
 PRETRAINED_PATH = "checkpoints/best_inpainting_model.pth"
 
@@ -138,7 +138,7 @@ for epoch in range(EPOCHS):
             model.state_dict(),
             os.path.join(
                 CHECKPOINT_DIR,
-                "segmentation_from_inpainting_best.pth"
+                "segmentation_from_inpainting_best(different 10k).pth"
             )
         )
 
@@ -147,4 +147,4 @@ for epoch in range(EPOCHS):
     print("-"*50)
 
 
-print("\n🎉 Fine-tuning from Inpainting Completed!")
+print("\n🎉 Fine-tuning from Inpainting Completed for different 10k!")
