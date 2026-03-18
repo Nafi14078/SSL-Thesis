@@ -10,14 +10,14 @@ from models.unet import UNet
 # -----------------------------
 # SETTINGS
 # -----------------------------
-IMAGE_DIR = "processed"
-MASK_DIR = "processed_masks"
-VAL_SPLIT = "segmentation_splits/val.txt"
+IMAGE_DIR = "processed_ped_10k/images"
+MASK_DIR = "processed_ped_10k/masks"
+VAL_SPLIT = "val_ped.txt"
 
-CHECKPOINT_PATH = "checkpoints/segmentation_baseline_best(different 10k).pth"
+CHECKPOINT_PATH = "checkpoints/ped_baseline_best.pth"
 
 BATCH_SIZE = 4
-DEVICE = "cpu"
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 # -----------------------------
@@ -27,20 +27,22 @@ def dice_score(pred, target, smooth=1e-6):
     pred = torch.sigmoid(pred)
     pred = (pred > 0.5).float()
 
-    intersection = (pred * target).sum()
-    return (2. * intersection + smooth) / (
-        pred.sum() + target.sum() + smooth
-    )
+    intersection = (pred * target).sum(dim=(1, 2, 3))
+    union = pred.sum(dim=(1, 2, 3)) + target.sum(dim=(1, 2, 3))
+
+    dice = (2. * intersection + smooth) / (union + smooth)
+    return dice.mean()
 
 
 def iou_score(pred, target, smooth=1e-6):
     pred = torch.sigmoid(pred)
     pred = (pred > 0.5).float()
 
-    intersection = (pred * target).sum()
-    union = pred.sum() + target.sum() - intersection
+    intersection = (pred * target).sum(dim=(1, 2, 3))
+    union = pred.sum(dim=(1, 2, 3)) + target.sum(dim=(1, 2, 3)) - intersection
 
-    return (intersection + smooth) / (union + smooth)
+    iou = (intersection + smooth) / (union + smooth)
+    return iou.mean()
 
 
 # -----------------------------
@@ -51,10 +53,13 @@ val_dataset = BratsSegmentationDataset(
 )
 
 val_loader = DataLoader(
-    val_dataset, batch_size=BATCH_SIZE, shuffle=False
+    val_dataset,
+    batch_size=BATCH_SIZE,
+    shuffle=False
 )
 
 print(f"Validation samples: {len(val_dataset)}")
+print(f"Using device: {DEVICE}")
 
 
 # -----------------------------
@@ -90,7 +95,10 @@ avg_dice = total_dice / num_batches
 avg_iou = total_iou / num_batches
 
 
-print("\n===== SEGMENTATION BASELINE(different 10k) RESULTS =====")
+# -----------------------------
+# Results
+# -----------------------------
+print("\n===== SEGMENTATION BASELINE (BraTS-PED) RESULTS =====")
 print(f"Average Dice Score: {avg_dice:.4f}")
 print(f"Average IoU Score:  {avg_iou:.4f}")
-print("==========================================")
+print("===================================================")
