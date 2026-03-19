@@ -11,18 +11,19 @@ from models.unet import UNet
 # -----------------------------
 # SETTINGS
 # -----------------------------
-IMAGE_DIR = "processed"
-MASK_DIR = "processed_masks"
+IMAGE_DIR = "processed_ped_10k/images"
+MASK_DIR = "processed_ped_10k/masks"
 
-TRAIN_SPLIT = "segmentation_splits/train.txt"
-VAL_SPLIT = "segmentation_splits/val.txt"
+TRAIN_SPLIT = "train_ped.txt"
+VAL_SPLIT = "val_ped.txt"
 
 PRETRAINED_PATH = "checkpoints/best_denoising_model.pth"
 
 BATCH_SIZE = 4
 EPOCHS = 20
 LR = 1e-4
-DEVICE = "cpu"
+
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 CHECKPOINT_DIR = "checkpoints"
 os.makedirs(CHECKPOINT_DIR, exist_ok=True)
@@ -40,15 +41,22 @@ val_dataset = BratsSegmentationDataset(
 )
 
 train_loader = DataLoader(
-    train_dataset, batch_size=BATCH_SIZE, shuffle=True
+    train_dataset,
+    batch_size=BATCH_SIZE,
+    shuffle=True,
+    num_workers=0
 )
 
 val_loader = DataLoader(
-    val_dataset, batch_size=BATCH_SIZE, shuffle=False
+    val_dataset,
+    batch_size=BATCH_SIZE,
+    shuffle=False,
+    num_workers=0
 )
 
 print(f"Train samples: {len(train_dataset)}")
 print(f"Val samples: {len(val_dataset)}")
+print(f"Using device: {DEVICE}")
 
 
 # -----------------------------
@@ -56,11 +64,18 @@ print(f"Val samples: {len(val_dataset)}")
 # -----------------------------
 model = UNet(in_channels=1, out_channels=1).to(DEVICE)
 
-print("Loading pretrained denoising weights...")
-model.load_state_dict(torch.load(PRETRAINED_PATH, map_location=DEVICE))
+print("🔄 Loading pretrained denoising weights...")
+model.load_state_dict(
+    torch.load(PRETRAINED_PATH, map_location=DEVICE),
+    strict=False   # 🔥 important for transfer learning
+)
+print("✅ Pretrained weights loaded!")
 
+
+# -----------------------------
+# Loss Functions
+# -----------------------------
 bce = nn.BCEWithLogitsLoss()
-
 
 def dice_loss(pred, target, smooth=1e-6):
     pred = torch.sigmoid(pred)
@@ -80,6 +95,7 @@ best_val_loss = float("inf")
 # -----------------------------
 for epoch in range(EPOCHS):
 
+    # -------- TRAIN --------
     model.train()
     train_loss = 0
 
@@ -100,7 +116,7 @@ for epoch in range(EPOCHS):
 
     train_loss /= len(train_loader)
 
-    # ---------------- Validation ----------------
+    # -------- VALIDATION --------
     model.eval()
     val_loss = 0
 
@@ -117,18 +133,21 @@ for epoch in range(EPOCHS):
 
     val_loss /= len(val_loader)
 
+    # -------- LOG --------
     print(f"\nEpoch [{epoch+1}/{EPOCHS}]")
     print(f"Train Loss: {train_loss:.6f}")
     print(f"Val Loss:   {val_loss:.6f}")
 
+    # -------- SAVE BEST --------
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         torch.save(
             model.state_dict(),
-            os.path.join(CHECKPOINT_DIR, "segmentation_from_denoising_best(different 10k).pth")
+            os.path.join(CHECKPOINT_DIR, "ped_from_denoising_best.pth")
         )
         print("✅ Best model saved!")
 
     print("-" * 50)
 
-print("\n🎉 Fine-tuning from Denoising(different 10k) Completed!")
+
+print("\n🎉 Fine-tuning from Denoising on BraTS-PED Completed!")

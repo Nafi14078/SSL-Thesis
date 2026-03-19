@@ -1,0 +1,8 @@
+Validation samples: 1001
+Using device: cpu
+
+===== SEGMENTATION (FROM DENOISING - BraTS-PED) RESULTS =====
+Average Dice Score: 0.8925
+Average IoU Score:  0.8297
+============================================================
+
