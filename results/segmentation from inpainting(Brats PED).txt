@@ -1,0 +1,7 @@
+Validation samples: 1001
+Using device: cpu
+
+===== SEGMENTATION (FROM INPAINTING - BraTS-PED) RESULTS =====
+Average Dice Score: 0.8507
+Average IoU Score:  0.7743
+=============================================================
