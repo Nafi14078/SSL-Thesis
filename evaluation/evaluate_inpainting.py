@@ -5,7 +5,7 @@ from skimage.metrics import peak_signal_noise_ratio as psnr
 from skimage.metrics import structural_similarity as ssim
 from tqdm import tqdm
 
-from datasets.brats_dataset import BratsSSLDataset
+from datasets.brats_dataset_pretraining import BratsSSLDataset
 from models.unet import UNet
 
 

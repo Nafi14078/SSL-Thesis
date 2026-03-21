@@ -1,6 +1,8 @@
 Validation samples: 2000
+Using device: cpu
 
-===== SEGMENTATION (FROM DENOISING) RESULTS(different 10k) =====
-Average Dice Score: 0.8586
-Average IoU Score:  0.8180
-=================================================
+===== SEGMENTATION (FROM DENOISING - Different 10k sample) RESULTS =====
+Average Dice Score: 0.8932
+Average IoU Score:  0.8596
+============================================================
+

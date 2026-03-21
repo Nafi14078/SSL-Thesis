@@ -1,4 +1,4 @@
-from datasets.brats_dataset import BratsSSLDataset
+from datasets.brats_dataset_pretraining import BratsSSLDataset
 import matplotlib.pyplot as plt
 import torch
 

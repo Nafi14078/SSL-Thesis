@@ -1,6 +1,7 @@
 Validation samples: 2000
+Using device: cpu
 
-===== SEGMENTATION BASELINE(different 10k) RESULTS =====
-Average Dice Score: 0.8327
-Average IoU Score:  0.7919
-==========================================
+===== SEGMENTATION BASELINE (different 10k sample) RESULTS =====
+Average Dice Score: 0.8803
+Average IoU Score:  0.8473
+===================================================

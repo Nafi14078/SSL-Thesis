@@ -1,6 +1,7 @@
 Validation samples: 2000
+Using device: cpu
 
-===== SEGMENTATION (FROM INPAINTING) RESULTS(different 10k) =====
-Average Dice Score: 0.8412
-Average IoU Score:  0.7953
-=================================================
+===== SEGMENTATION (FROM Inpainting - Different 10k sample) RESULTS =====
+Average Dice Score: 0.8760
+Average IoU Score:  0.8387
+============================================================

@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-from datasets.brats_dataset import BratsSSLDataset
+from datasets.brats_dataset_pretraining import BratsSSLDataset
 from models.unet import UNet
 
 
