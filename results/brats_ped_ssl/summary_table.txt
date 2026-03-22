@@ -1,0 +1,4 @@
+===== SUMMARY TABLE =====
+Model | Dice | IoU | Precision | Recall | F1
+Baseline | 0.8554 | 0.7814 | 0.8649 | 0.8663 | 0.8554
+SSL | 0.8922 | 0.8293 | 0.8949 | 0.9052 | 0.8922
