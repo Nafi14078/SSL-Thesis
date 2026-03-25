@@ -17,13 +17,13 @@ MASK_DIR = "processed_ped_10k/masks"
 VAL_SPLIT = "val_ped.txt"
 
 BASELINE_MODEL = "checkpoints/ped_baseline_best.pth"
-SSL_MODEL = "checkpoints/ped_from_denoising_best.pth"
+DENOISING_MODEL = "checkpoints/ped_from_denoising_best.pth"
+INPAINTING_MODEL = "checkpoints/ped_from_inpainting_best.pth"
 
 DEVICE = "cpu"
 BATCH_SIZE = 1
 
-# RESULTS FOLDER
-RESULTS_DIR = "results/brats_ped_ssl"
+RESULTS_DIR = "results/brats_ped_ssl_all"
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
 
@@ -50,7 +50,7 @@ def compute_metrics(pred, target):
 # Dataset
 # ----------------------------------
 dataset = BratsSegmentationDataset(IMAGE_DIR, MASK_DIR, VAL_SPLIT)
-loader = DataLoader(dataset, batch_size=1, shuffle=False)
+loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False)
 
 
 # ----------------------------------
@@ -60,21 +60,27 @@ baseline = UNet(1, 1).to(DEVICE)
 baseline.load_state_dict(torch.load(BASELINE_MODEL, map_location=DEVICE))
 baseline.eval()
 
-ssl = UNet(1, 1).to(DEVICE)
-ssl.load_state_dict(torch.load(SSL_MODEL, map_location=DEVICE))
-ssl.eval()
+denoising = UNet(1, 1).to(DEVICE)
+denoising.load_state_dict(torch.load(DENOISING_MODEL, map_location=DEVICE))
+denoising.eval()
+
+inpainting = UNet(1, 1).to(DEVICE)
+inpainting.load_state_dict(torch.load(INPAINTING_MODEL, map_location=DEVICE))
+inpainting.eval()
 
 
 # ----------------------------------
 # Evaluation
 # ----------------------------------
 baseline_metrics = []
-ssl_metrics = []
+denoising_metrics = []
+inpainting_metrics = []
 
 sample_images = []
 sample_masks = []
 baseline_preds = []
-ssl_preds = []
+denoising_preds = []
+inpainting_preds = []
 
 with torch.no_grad():
     for images, masks in tqdm(loader):
@@ -83,24 +89,24 @@ with torch.no_grad():
         masks = masks.to(DEVICE)
 
         b_out = baseline(images)
-        s_out = ssl(images)
+        d_out = denoising(images)
+        i_out = inpainting(images)
 
-        b_metrics = compute_metrics(b_out, masks)
-        s_metrics = compute_metrics(s_out, masks)
+        baseline_metrics.append(compute_metrics(b_out, masks))
+        denoising_metrics.append(compute_metrics(d_out, masks))
+        inpainting_metrics.append(compute_metrics(i_out, masks))
 
-        baseline_metrics.append(b_metrics)
-        ssl_metrics.append(s_metrics)
-
-        # store some difficult cases
         if len(sample_images) < 5:
             sample_images.append(images.cpu())
             sample_masks.append(masks.cpu())
             baseline_preds.append(b_out.cpu())
-            ssl_preds.append(s_out.cpu())
+            denoising_preds.append(d_out.cpu())
+            inpainting_preds.append(i_out.cpu())
 
 
 baseline_metrics = np.array(baseline_metrics)
-ssl_metrics = np.array(ssl_metrics)
+denoising_metrics = np.array(denoising_metrics)
+inpainting_metrics = np.array(inpainting_metrics)
 
 
 # ----------------------------------
@@ -111,16 +117,15 @@ def summarize(metrics):
 
 
 b_mean = summarize(baseline_metrics)
-s_mean = summarize(ssl_metrics)
+d_mean = summarize(denoising_metrics)
+i_mean = summarize(inpainting_metrics)
 
 print("\n===== SUMMARY TABLE =====")
 print("Model | Dice | IoU | Precision | Recall | F1")
-print(
-    f"Baseline | {b_mean[0]:.4f} | {b_mean[1]:.4f} | {b_mean[2]:.4f} | {b_mean[3]:.4f} | {b_mean[4]:.4f}"
-)
-print(
-    f"SSL | {s_mean[0]:.4f} | {s_mean[1]:.4f} | {s_mean[2]:.4f} | {s_mean[3]:.4f} | {s_mean[4]:.4f}"
-)
+
+print(f"Baseline  | {b_mean[0]:.4f} | {b_mean[1]:.4f} | {b_mean[2]:.4f} | {b_mean[3]:.4f} | {b_mean[4]:.4f}")
+print(f"Inpainting| {i_mean[0]:.4f} | {i_mean[1]:.4f} | {i_mean[2]:.4f} | {i_mean[3]:.4f} | {i_mean[4]:.4f}")
+print(f"Denoising | {d_mean[0]:.4f} | {d_mean[1]:.4f} | {d_mean[2]:.4f} | {d_mean[3]:.4f} | {d_mean[4]:.4f}")
 
 
 # ----------------------------------
@@ -128,44 +133,46 @@ print(
 # ----------------------------------
 labels = ["Dice", "IoU", "Precision", "Recall", "F1"]
 
-plt.figure(figsize=(8, 5))
-plt.bar(np.arange(5) - 0.2, b_mean, width=0.4, label="Baseline")
-plt.bar(np.arange(5) + 0.2, s_mean, width=0.4, label="SSL")
-plt.xticks(range(5), labels)
+x = np.arange(len(labels))
+width = 0.25
+
+plt.figure(figsize=(9, 5))
+plt.bar(x - width, b_mean, width, label="Baseline")
+plt.bar(x, i_mean, width, label="Inpainting")
+plt.bar(x + width, d_mean, width, label="Denoising")
+
+plt.xticks(x, labels)
 plt.legend()
-plt.title("Baseline vs SSL Comparison")
+plt.title("Baseline vs SSL (Inpainting vs Denoising)")
 plt.tight_layout()
 
-plt.savefig(
-    os.path.join(RESULTS_DIR, "comparison_bar.png"),
-    dpi=300,
-    bbox_inches="tight"
-)
+plt.savefig(os.path.join(RESULTS_DIR, "comparison_bar.png"), dpi=300)
 plt.close()
 
 
 # ----------------------------------
 # BOX PLOT
 # ----------------------------------
-plt.figure(figsize=(6, 5))
-plt.boxplot([baseline_metrics[:, 0], ssl_metrics[:, 0]])
-plt.xticks([1, 2], ["Baseline", "SSL"])
+plt.figure(figsize=(7, 5))
+plt.boxplot([
+    baseline_metrics[:, 0],
+    inpainting_metrics[:, 0],
+    denoising_metrics[:, 0]
+])
+
+plt.xticks([1, 2, 3], ["Baseline", "Inpainting", "Denoising"])
 plt.ylabel("Dice Score")
 plt.title("Dice Distribution")
 plt.tight_layout()
 
-plt.savefig(
-    os.path.join(RESULTS_DIR, "dice_boxplot.png"),
-    dpi=300,
-    bbox_inches="tight"
-)
+plt.savefig(os.path.join(RESULTS_DIR, "dice_boxplot.png"), dpi=300)
 plt.close()
 
 
 # ----------------------------------
-# QUALITATIVE COMPARISON GRID
+# QUALITATIVE GRID
 # ----------------------------------
-fig, axes = plt.subplots(5, 4, figsize=(12, 12))
+fig, axes = plt.subplots(5, 5, figsize=(15, 12))
 
 for i in range(5):
 
@@ -173,88 +180,50 @@ for i in range(5):
     mask = sample_masks[i][0, 0]
 
     b = (torch.sigmoid(baseline_preds[i])[0, 0] > 0.5)
-    s = (torch.sigmoid(ssl_preds[i])[0, 0] > 0.5)
+    d = (torch.sigmoid(denoising_preds[i])[0, 0] > 0.5)
+    inp = (torch.sigmoid(inpainting_preds[i])[0, 0] > 0.5)
 
     axes[i, 0].imshow(img, cmap="gray")
     axes[i, 0].set_title("FLAIR")
 
     axes[i, 1].imshow(mask, cmap="gray")
-    axes[i, 1].set_title("Ground Truth")
+    axes[i, 1].set_title("GT")
 
     axes[i, 2].imshow(b, cmap="gray")
     axes[i, 2].set_title("Baseline")
 
-    axes[i, 3].imshow(s, cmap="gray")
-    axes[i, 3].set_title("SSL")
+    axes[i, 3].imshow(inp, cmap="gray")
+    axes[i, 3].set_title("Inpainting")
 
-    for j in range(4):
+    axes[i, 4].imshow(d, cmap="gray")
+    axes[i, 4].set_title("Denoising")
+
+    for j in range(5):
         axes[i, j].axis("off")
 
 plt.tight_layout()
-plt.savefig(
-    os.path.join(RESULTS_DIR, "qualitative_grid.png"),
-    dpi=300,
-    bbox_inches="tight"
-)
+plt.savefig(os.path.join(RESULTS_DIR, "qualitative_grid.png"), dpi=300)
 plt.close()
 
 
 # ----------------------------------
-# ERROR HEATMAP
+# ERROR HEATMAP (Baseline vs Denoising)
 # ----------------------------------
 plt.figure(figsize=(6, 6))
 
 img = sample_images[0][0, 0]
 b = (torch.sigmoid(baseline_preds[0])[0, 0] > 0.5)
-s = (torch.sigmoid(ssl_preds[0])[0, 0] > 0.5)
+d = (torch.sigmoid(denoising_preds[0])[0, 0] > 0.5)
 
-error = b.float() - s.float()
+error = b.float() - d.float()
 
 plt.imshow(img, cmap="gray")
 plt.imshow(error, alpha=0.5)
-plt.title("Error Map (Baseline - SSL)")
+plt.title("Error Map (Baseline - Denoising)")
 plt.axis("off")
 
-plt.savefig(
-    os.path.join(RESULTS_DIR, "error_heatmap.png"),
-    dpi=300,
-    bbox_inches="tight"
-)
+plt.savefig(os.path.join(RESULTS_DIR, "error_heatmap.png"), dpi=300)
 plt.close()
 
-
-# ----------------------------------
-# BLAND ALTMAN PLOT
-# ----------------------------------
-gt_area = []
-pred_area = []
-
-for i in range(len(sample_masks)):
-    gt = sample_masks[i].sum()
-    pr = (torch.sigmoid(ssl_preds[i]) > 0.5).sum()
-
-    gt_area.append(gt.item())
-    pred_area.append(pr.item())
-
-gt_area = np.array(gt_area)
-pred_area = np.array(pred_area)
-
-mean = (gt_area + pred_area) / 2
-diff = pred_area - gt_area
-
-plt.figure(figsize=(6, 5))
-plt.scatter(mean, diff)
-plt.axhline(diff.mean(), linestyle="--")
-plt.title("Bland-Altman Plot")
-plt.xlabel("Mean Tumor Area")
-plt.ylabel("Difference")
-plt.tight_layout()
-
-plt.savefig(
-    os.path.join(RESULTS_DIR, "bland_altman.png"),
-    dpi=300,
-    bbox_inches="tight"
-)
-plt.close()
 
 print(f"\nAll results saved to: {RESULTS_DIR}")
