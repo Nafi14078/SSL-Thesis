@@ -14,9 +14,9 @@ os.makedirs(SAVE_MASK_PATH, exist_ok=True)
 
 # =========================
 # SETTINGS
-# =========================
-MAX_SLICES = 10000
-MIN_TUMOR_PIXELS = 50   # filter empty slices
+# ========================
+MAX_SLICES = float("inf")  # limit total slices for faster experimentation
+MIN_TUMOR_PIXELS = 0   # filter empty slices
 
 count = 0
 
