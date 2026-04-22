@@ -17,7 +17,7 @@ MASK_DIR = "processed_ped_10k/masks"
 TRAIN_SPLIT = "train_ped.txt"
 VAL_SPLIT = "val_ped.txt"
 
-PRETRAINED_PATH = "checkpoints/best_denoising_model.pth"
+PRETRAINED_PATH = "checkpoints/best_tans_model.pth"
 
 BATCH_SIZE = 4
 EPOCHS = 20
@@ -64,7 +64,7 @@ print(f"Using device: {DEVICE}")
 # -----------------------------
 model = UNet(in_channels=1, out_channels=1).to(DEVICE)
 
-print("🔄 Loading pretrained denoising weights...")
+print("🔄 Loading pretrained denoising tans weights...")
 model.load_state_dict(
     torch.load(PRETRAINED_PATH, map_location=DEVICE),
     strict=False   # 🔥 important for transfer learning
@@ -143,11 +143,11 @@ for epoch in range(EPOCHS):
         best_val_loss = val_loss
         torch.save(
             model.state_dict(),
-            os.path.join(CHECKPOINT_DIR, "ped_from_denoising_best.pth")
+            os.path.join(CHECKPOINT_DIR, "ped_from_denoising_tans_best.pth")
         )
         print("✅ Best model saved!")
 
     print("-" * 50)
 
 
-print("\n🎉 Fine-tuning from Denoising on BraTS-PED Completed!")
+print("\n🎉 Fine-tuning from Denoising_tans on BraTS-PED Completed!")

@@ -13,7 +13,7 @@ IMAGE_DIR = "processed_ped_10k/images"
 MASK_DIR = "processed_ped_10k/masks"
 VAL_SPLIT = "val_ped.txt"
 
-CHECKPOINT_PATH = "checkpoints/ped_from_denoising_best.pth"
+CHECKPOINT_PATH = "checkpoints/ped_from_denoising_tans_best.pth"
 
 BATCH_SIZE = 4
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"

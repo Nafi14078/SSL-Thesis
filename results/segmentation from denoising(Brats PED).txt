@@ -6,3 +6,8 @@ Average Dice Score: 0.8925
 Average IoU Score:  0.8297
 ============================================================
 
+
+===== SEGMENTATION tans (FROM DENOISING - BraTS-PED) RESULTS =====
+Average Dice Score: 0.8881
+Average IoU Score:  0.8238
+============================================================

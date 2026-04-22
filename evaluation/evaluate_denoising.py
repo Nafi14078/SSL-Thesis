@@ -6,7 +6,7 @@ from skimage.metrics import peak_signal_noise_ratio as psnr
 from skimage.metrics import structural_similarity as ssim
 from tqdm import tqdm
 
-from datasets.brats_dataset_pretraining import BratsSSLDataset
+from datasets.brats_dataset_pretraining_updated import BratsSSLDataset
 from models.unet import UNet
 
 
@@ -18,7 +18,7 @@ DEVICE = torch.device("cpu")
 
 DATA_DIR = "processed"
 VAL_SPLIT_PATH = "splits/val.txt"
-CHECKPOINT_PATH = "checkpoints/best_denoising_model.pth"
+CHECKPOINT_PATH = "checkpoints/best_tans_model.pth"
 
 BATCH_SIZE = 8   # Can increase slightly for faster eval
 
@@ -30,7 +30,7 @@ BATCH_SIZE = 8   # Can increase slightly for faster eval
 val_dataset = BratsSSLDataset(
     data_dir=DATA_DIR,
     file_list_path=VAL_SPLIT_PATH,
-    task="denoising"
+    task="tans"   # Use TANS noise for evaluation
 )
 
 val_loader = DataLoader(
@@ -93,7 +93,7 @@ avg_ssim = total_ssim / num_images
 # Print Results
 # ======================================================
 
-print("\n===== DENOISING EVALUATION RESULTS =====")
+print("\n===== DENOISING tans EVALUATION RESULTS =====")
 print(f"Total images evaluated: {num_images}")
 print(f"Average PSNR: {avg_psnr:.4f} dB")
 print(f"Average SSIM: {avg_ssim:.4f}")
